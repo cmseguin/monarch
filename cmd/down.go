@@ -62,7 +62,7 @@ var downCmd = &cobra.Command{
 		db, err := utils.InitDb(cmd)
 
 		if err != nil {
-			println("Error initializing database")
+			println(err.Error())
 			os.Exit(1)
 		}
 
