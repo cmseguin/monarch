@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -56,4 +57,26 @@ func GetMigrationContent(migrationDir, file string) (string, error) {
 	}
 
 	return string(migrationContent), nil
+}
+
+func SortUpMigrations(migrations []string) []string {
+	sortedMigrations := append([]string{}, migrations...)
+
+	sort.Strings(sortedMigrations)
+
+	return sortedMigrations
+}
+
+func SortDownMigrations(migrations []string) []string {
+	sortedMigrations := append([]string{}, migrations...)
+
+	sort.Strings(sortedMigrations)
+
+	// Reverse the order
+	for i := len(sortedMigrations)/2 - 1; i >= 0; i-- {
+		opp := len(sortedMigrations) - 1 - i
+		sortedMigrations[i], sortedMigrations[opp] = sortedMigrations[opp], sortedMigrations[i]
+	}
+
+	return sortedMigrations
 }

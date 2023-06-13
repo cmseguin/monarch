@@ -74,10 +74,10 @@ var downCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Filter out the migrations that have already been run
+		// Filter out the migrations that have not already been run
 		var filteredMigrations []string = []string{}
 		for _, file := range filesToMigrate {
-			if !slices.Contains(appliedMigrations, file) {
+			if slices.Contains(appliedMigrations, file) {
 				filteredMigrations = append(filteredMigrations, file)
 			}
 		}
@@ -87,8 +87,10 @@ var downCmd = &cobra.Command{
 			os.Exit(0)
 		}
 
+		sortedFilteredMigrations := utils.SortDownMigrations(filteredMigrations)
+
 		// Run the migrations
-		for _, file := range filteredMigrations {
+		for _, file := range sortedFilteredMigrations {
 			fileContent, err := utils.GetMigrationContent(migrationDir, file)
 
 			if err != nil {

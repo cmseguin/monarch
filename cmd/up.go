@@ -87,8 +87,10 @@ var upCmd = &cobra.Command{
 			os.Exit(0)
 		}
 
+		sortedFilteredMigrations := utils.SortUpMigrations(filteredMigrations)
+
 		// Run the migrations
-		for _, file := range filteredMigrations {
+		for _, file := range sortedFilteredMigrations {
 			fileContent, err := utils.GetMigrationContent(migrationDir, file)
 
 			if err != nil {
