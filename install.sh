@@ -98,9 +98,11 @@ install_monarch() {
   go install "$dirname"
   go build -o "$install_dir/.monarch/bin/monarch" "$dirname/main.go"
 
-  # clean_tmp_dir $install_dir
+  clean_tmp_dir $install_dir
   local profile=$(find_profile_file)
   set_path_in_profile $install_dir $profile
+
+  source $profile
 }
 
 install_monarch $HOME
