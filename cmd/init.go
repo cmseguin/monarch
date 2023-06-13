@@ -22,9 +22,6 @@ var initCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		utils.LoadEnvFile(utils.GetStringArg(cmd, "dotenvfile", "", ""))
 
-		// TODO add support for inputting the init path
-		var initPath string = "."
-
 		// Get the current working directory
 		currentDir, err := os.Getwd()
 
@@ -49,7 +46,6 @@ var initCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		currentDir = path.Join(currentDir, initPath)
 		migrationDir := path.Join(currentDir, "migrations")
 
 		// check if the directory exists

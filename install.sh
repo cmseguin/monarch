@@ -21,7 +21,6 @@ download_source_tarball() {
   local file="$tmp_dir/monarch-$version.tar.gz"
 
   curl --show-error --location --fail --output "$file" --write-out "$file" $url
-  echo $filename
 }
 
 extract_source_tarball() {
@@ -93,9 +92,6 @@ install_monarch() {
   download_source_tarball $install_dir $version
   local dirname=$(extract_source_tarball $install_dir $version)
 
-  echo $dirname
-
-  go install "$dirname"
   go build -o "$install_dir/.monarch/bin/monarch" "$dirname/main.go"
 
   clean_tmp_dir $install_dir

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"os"
 	"path"
 	"regexp"
@@ -33,15 +34,13 @@ func ValidateMigrationName(migrationName string) bool {
 }
 
 func GetMigrationPath(initPath string) (string, error) {
-	// Get the current working directory
-	currentDir, err := os.Getwd()
+	installDir, err := FindInstallationPath()
 
 	if err != nil {
 		return "", err
 	}
 
-	currentDir = path.Join(currentDir, initPath)
-	migrationDir := path.Join(currentDir, "migrations")
+	migrationDir := path.Join(installDir, "migrations")
 
 	return migrationDir, nil
 }
@@ -79,4 +78,30 @@ func SortDownMigrations(migrations []string) []string {
 	}
 
 	return sortedMigrations
+}
+
+func FindInstallationPath() (string, error) {
+	currentDir, err := os.Getwd()
+
+	if err != nil {
+		return "", err
+	}
+
+	// Check if the current directory is the installation directory
+	if _, err := os.Stat(path.Join(currentDir, "migrations")); err == nil {
+		return currentDir, nil
+	}
+
+	// Check each parent directory for the installation directory
+	for {
+		currentDir = path.Dir(currentDir)
+
+		if currentDir == "/" {
+			return "", errors.New("Could not find installation directory")
+		}
+
+		if _, err := os.Stat(path.Join(currentDir, "migrations")); err == nil {
+			return currentDir, nil
+		}
+	}
 }
