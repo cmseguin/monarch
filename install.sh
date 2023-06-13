@@ -1,15 +1,22 @@
 #!/bin/bash
+
+VERSION=$1
+
 latest_release_url() {
   echo "https://github.com/cmseguin/monarch/releases/latest"
 }
 
 get_source_tarball_url() {
   local version=$1
-  echo "https://github.com/cmseguin/monarch/archive/refs/tags/$1.tar.gz"
+  if [ "$version" = "main" ]; then
+    echo "https://github.com/cmseguin/monarch/archive/refs/heads/main.tar.gz"
+  else 
+    echo "https://github.com/cmseguin/monarch/archive/refs/tags/$1.tar.gz"
+  fi
 }
 
 get_lastest_release() {
-  local version=$(curl --show-error --location --fail $(latest_release_url) | grep -Eo "tag/[0-9]\\.[0-9]\\.[0-9](-[0-9]+)?" | grep -Eo "[^/]+$" | head -n 1)
+  local version=$(curl --no-progress-meter --show-error --location --fail $(latest_release_url) | grep -Eo "tag/[0-9]\\.[0-9]\\.[0-9](-[0-9]+)?" | grep -Eo "[^/]+$" | head -n 1)
   echo $version
 }
 
@@ -20,7 +27,7 @@ download_source_tarball() {
   local tmp_dir="$install_dir/.monarch/tmp"
   local file="$tmp_dir/monarch-$version.tar.gz"
 
-  curl --show-error --location --fail --output "$file" --write-out "$file" $url
+  curl --no-progress-meter --show-error --location --fail --output "$file" $url
 }
 
 extract_source_tarball() {
@@ -86,7 +93,13 @@ set_path_in_profile() {
 
 install_monarch() {
   local install_dir=$1
-  local version=$(get_lastest_release)
+  local version=""
+
+  if [ -z "$VERSION" ]; then
+    version=$(get_lastest_release)
+  else
+    version=$VERSION
+  fi
 
   create_install_dir $install_dir
   download_source_tarball $install_dir $version
@@ -98,7 +111,7 @@ install_monarch() {
   local profile=$(find_profile_file)
   set_path_in_profile $install_dir $profile
 
-  source $profile
+  echo "Monarch $version has been installed."
 }
 
 install_monarch $HOME
