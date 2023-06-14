@@ -17,6 +17,8 @@ var downCmd = &cobra.Command{
 	Use:   "down [limitPattern]",
 	Short: "Migration down",
 	Run: func(cmd *cobra.Command, args []string) {
+		utils.LoadEnvFile(utils.GetStringArg(cmd, "dotenvfile", "", ""))
+
 		var limitPattern string = "*"
 
 		if len(args) > 0 {

@@ -17,6 +17,8 @@ var createCmd = &cobra.Command{
 	Use:   "create [migrationName]",
 	Short: "Create a migration",
 	Run: func(cmd *cobra.Command, args []string) {
+		utils.LoadEnvFile(utils.GetStringArg(cmd, "dotenvfile", "", ""))
+
 		var migrationName string
 
 		if len(args) > 0 {
