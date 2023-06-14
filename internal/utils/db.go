@@ -96,9 +96,9 @@ func ApplyMigration(db *sql.DB, name string) (err error) {
 	switch db.Driver().(type) {
 	case *mysql.MySQLDriver:
 	case *sqlite.Driver:
-		_, err = db.Exec("UPDATE migrations SET is_applied = true, updated_at = NOW() WHERE name = ?", name)
+		_, err = db.Exec("UPDATE migrations SET is_applied = true, updated_at = NOW() WHERE key = ?", name)
 	case *pq.Driver:
-		_, err = db.Exec("UPDATE migrations SET is_applied = true, updated_at = NOW() WHERE name = $1", name)
+		_, err = db.Exec("UPDATE migrations SET is_applied = true, updated_at = NOW() WHERE key = $1", name)
 	}
 
 	return err
@@ -108,9 +108,9 @@ func RollbackMigration(db *sql.DB, name string) (err error) {
 	switch db.Driver().(type) {
 	case *mysql.MySQLDriver:
 	case *sqlite.Driver:
-		_, err = db.Exec("UPDATE migrations SET is_applied = false, updated_at = NOW() WHERE name = ?", name)
+		_, err = db.Exec("UPDATE migrations SET is_applied = false, updated_at = NOW() WHERE key = ?", name)
 	case *pq.Driver:
-		_, err = db.Exec("UPDATE migrations SET is_applied = false, updated_at = NOW() WHERE name = $1", name)
+		_, err = db.Exec("UPDATE migrations SET is_applied = false, updated_at = NOW() WHERE key = $1", name)
 	}
 
 	return err
@@ -120,9 +120,9 @@ func GetMigrationStatus(db *sql.DB, name string) (isApplied bool, err error) {
 	switch db.Driver().(type) {
 	case *mysql.MySQLDriver:
 	case *sqlite.Driver:
-		err = db.QueryRow("SELECT is_applied FROM migrations WHERE name = ?", name).Scan(&isApplied)
+		err = db.QueryRow("SELECT is_applied FROM migrations WHERE key = ?", name).Scan(&isApplied)
 	case *pq.Driver:
-		err = db.QueryRow("SELECT is_applied FROM migrations WHERE name = $1", name).Scan(&isApplied)
+		err = db.QueryRow("SELECT is_applied FROM migrations WHERE key = $1", name).Scan(&isApplied)
 	}
 
 	return isApplied, err

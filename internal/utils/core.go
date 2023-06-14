@@ -7,6 +7,9 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/cmseguin/monarch/internal/types"
+	"github.com/ryanuber/go-glob"
 )
 
 func ValidateMigrationName(migrationName string) bool {
@@ -104,4 +107,96 @@ func FindInstallationPath() (string, error) {
 			return currentDir, nil
 		}
 	}
+}
+
+func GetDownMigratrionObjectsFromDir(dirname string, migrationObjects *[]types.MigrationObject) error {
+	entries, err := os.ReadDir(dirname)
+
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		if entry.Name()[len(entry.Name())-9:] == ".down.sql" {
+			*migrationObjects = append(*migrationObjects, types.MigrationObject{
+				Key:  entry.Name()[0 : len(entry.Name())-9],
+				File: entry.Name(),
+			})
+		}
+	}
+
+	return nil
+}
+
+func GetUpMigratrionObjectsFromDir(dirname string, migrationObjects *[]types.MigrationObject) error {
+	entries, err := os.ReadDir(dirname)
+
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		if entry.Name()[len(entry.Name())-7:] == ".up.sql" {
+			*migrationObjects = append(*migrationObjects, types.MigrationObject{
+				Key:  entry.Name()[0 : len(entry.Name())-7],
+				File: entry.Name(),
+			})
+		}
+	}
+
+	return nil
+}
+
+func SortMigrationObjects(migrationObjects []types.MigrationObject) []types.MigrationObject {
+	sortedMigrationObjects := append([]types.MigrationObject{}, migrationObjects...)
+
+	sort.Slice(sortedMigrationObjects, func(i, j int) bool {
+		return sortedMigrationObjects[i].Key < sortedMigrationObjects[j].Key
+	})
+
+	return sortedMigrationObjects
+}
+
+func ReverseMigrationObjects(migrationObjects []types.MigrationObject) []types.MigrationObject {
+	reversedMigrationObjects := append([]types.MigrationObject{}, migrationObjects...)
+
+	for i := len(reversedMigrationObjects)/2 - 1; i >= 0; i-- {
+		opp := len(reversedMigrationObjects) - 1 - i
+		reversedMigrationObjects[i], reversedMigrationObjects[opp] = reversedMigrationObjects[opp], reversedMigrationObjects[i]
+	}
+
+	return reversedMigrationObjects
+}
+
+func FilterMigrationToRun(
+	limitPattern string,
+	migrationObjects []types.MigrationObject,
+	invalidMigrationKeysFromDatabase []string,
+) []types.MigrationObject {
+	migrationObjectsToRun := []types.MigrationObject{}
+
+	for _, migrationObject := range migrationObjects {
+		foundIndex := FindIndexInString(invalidMigrationKeysFromDatabase, func(value string, index int) bool {
+			return value == migrationObject.Key
+		})
+
+		if foundIndex == -1 {
+			migrationObjectsToRun = append(migrationObjectsToRun, migrationObject)
+		}
+
+		// If limit pattern is met, stop migrating
+		if limitPattern != "" && !glob.Glob(limitPattern, migrationObject.Key) {
+			break
+		}
+	}
+
+	return migrationObjectsToRun
 }
