@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path"
 
@@ -26,24 +25,21 @@ var initCmd = &cobra.Command{
 		currentDir, err := os.Getwd()
 
 		if err != nil {
-			fmt.Println("Error getting current working directory")
-			os.Exit(1)
+			utils.WrapError(err, 1).Explain("Error getting current working directory").Terminate()
 		}
 
 		// Try to connect to the database
-		db, err := utils.InitDb(cmd)
+		db, exception := utils.InitDb(cmd)
 
-		if err != nil {
-			fmt.Println("Error connecting to database")
-			os.Exit(1)
+		if exception != nil {
+			exception.Terminate()
 		}
 
 		// Create the migrations table
-		err = utils.CreateMigrationTable(db)
+		exception = utils.CreateMigrationTable(db)
 
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+		if exception != nil {
+			exception.Terminate()
 		}
 
 		migrationDir := path.Join(currentDir, "migrations")
@@ -54,11 +50,10 @@ var initCmd = &cobra.Command{
 			err := os.Mkdir(migrationDir, 0755)
 
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				utils.WrapError(err, 1).Explain("Error creating migrations directory").Terminate()
 			}
 		}
 
-		fmt.Println("Initialized monarch in " + currentDir)
+		println("Initialized monarch in " + currentDir)
 	},
 }

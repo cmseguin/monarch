@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"os"
 
 	"github.com/cmseguin/monarch/internal/types"
@@ -27,41 +28,36 @@ var downCmd = &cobra.Command{
 		// TODO add support for inputting the init path
 		var initPath string = "."
 
-		migrationDir, err := utils.GetMigrationPath(initPath)
+		migrationDir, exception := utils.GetMigrationPath(initPath)
 
-		if err != nil {
-			println("Error getting migration path")
-			os.Exit(1)
+		if exception != nil {
+			exception.Terminate()
 		}
 
 		migrationObjects := []types.MigrationObject{}
 
-		err = utils.GetDownMigratrionObjectsFromDir(migrationDir, &migrationObjects)
+		exception = utils.GetDownMigratrionObjectsFromDir(migrationDir, &migrationObjects)
 
-		if err != nil {
-			println("Error reading migrations directory")
-			os.Exit(1)
+		if exception != nil {
+			exception.Terminate()
 		}
 
 		if len(migrationObjects) == 0 {
-			println("No migration files to rollback")
-			os.Exit(0)
+			utils.WrapError(errors.New("no migration files to rollback"), 0).Terminate()
 		}
 
 		// Filter out the down migrations
-		db, err := utils.InitDb(cmd)
+		db, exception := utils.InitDb(cmd)
 
-		if err != nil {
-			println(err.Error())
-			os.Exit(1)
+		if exception != nil {
+			exception.Explain("Error connecting to the database").SetCode(1).Terminate()
 		}
 
 		// Get the list of migrations that have already been run
-		invalidMigrationKeysFromDatabase, err := utils.GetMigrationsFromDatabase(db, false)
+		invalidMigrationKeysFromDatabase, exception := utils.GetMigrationsFromDatabase(db, false)
 
-		if err != nil {
-			println("Error getting migrations")
-			os.Exit(1)
+		if exception != nil {
+			exception.Terminate()
 		}
 
 		sortedMigrations := utils.SortMigrationObjects(migrationObjects)
@@ -75,33 +71,29 @@ var downCmd = &cobra.Command{
 		)
 
 		if len(migrationObjectsToRun) == 0 {
-			println("No applied migration migrations to rollback after filtering")
-			os.Exit(0)
+			utils.WrapError(errors.New("no applied migration migrations to rollback after filtering"), 0).Terminate()
 		}
 
 		// Run the migrations
 		for _, migrationObject := range migrationObjectsToRun {
-			fileContent, err := utils.GetMigrationContent(migrationDir, migrationObject.File)
+			fileContent, exception := utils.GetMigrationContent(migrationDir, migrationObject.File)
 
-			if err != nil {
-				println("Error getting migration content: " + migrationObject.File)
-				os.Exit(1)
+			if exception != nil {
+				exception.Explain("Error getting migration content: " + migrationObject.File).Terminate()
 			}
 
 			// Run the migration
-			err = utils.ExecuteMigration(db, fileContent)
+			exception = utils.ExecuteMigration(db, fileContent)
 
-			if err != nil {
-				println("Error rolling back migration: " + migrationObject.File)
-				os.Exit(1)
+			if exception != nil {
+				exception.Explain("Error running migration: " + migrationObject.File).Terminate()
 			}
 
 			// Update the status of the migration in the database.
-			err = utils.RollbackMigration(db, migrationObject.Key)
+			exception = utils.RollbackMigration(db, migrationObject.Key)
 
-			if err != nil {
-				println("Error updating the status of migration: " + migrationObject.Key)
-				os.Exit(1)
+			if exception != nil {
+				exception.Explain("Error updating the status of migration: " + migrationObject.Key).Terminate()
 			}
 		}
 

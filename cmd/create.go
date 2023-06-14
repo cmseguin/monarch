@@ -43,26 +43,23 @@ var createCmd = &cobra.Command{
 		migrationUpFile := datestamp + "-" + migrationName + ".up.sql"
 		migrationDownFile := datestamp + "-" + migrationName + ".down.sql"
 
-		migrationPath, err := utils.GetMigrationPath("")
+		migrationPath, exception := utils.GetMigrationPath("")
 
-		if err != nil {
-			println("Error getting migration path")
-			os.Exit(1)
+		if exception != nil {
+			exception.Terminate()
 		}
 
 		migrationUpPath := path.Join(migrationPath, migrationUpFile)
 		migrationDownPath := path.Join(migrationPath, migrationDownFile)
 
-		_, err = os.Stat(migrationUpPath)
+		_, err := os.Stat(migrationUpPath)
 
 		if err == nil {
 			println("Migration up file already exists")
 		} else if os.IsNotExist(err) {
 			_, err := os.Create(migrationUpPath)
-
 			if err != nil {
-				println("Error creating migration up file")
-				os.Exit(1)
+				utils.WrapError(err, 1).Explain("Error creating migration up file").Terminate()
 			}
 		}
 
@@ -74,8 +71,7 @@ var createCmd = &cobra.Command{
 			_, err := os.Create(migrationDownPath)
 
 			if err != nil {
-				println("Error creating migration down file")
-				os.Exit(1)
+				utils.WrapError(err, 1).Explain("Error creating migration down file").Terminate()
 			}
 		}
 

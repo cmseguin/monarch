@@ -22,24 +22,25 @@ func IsDriverSupported(driver string, supportedDriverList []string) bool {
 	return supported
 }
 
-func ConnectToDatabase(driver string, connection string) (db *sql.DB, err error) {
-	db, err = sql.Open(driver, connection)
+func ConnectToDatabase(driver string, connection string) (*sql.DB, *Exception) {
+	db, err := sql.Open(driver, connection)
 
 	if err != nil {
-		return nil, err
+		return nil, WrapError(err, 1).Explain("Could not connect to database")
 	}
 
 	err = db.Ping()
 
 	if err != nil {
-		return nil, err
+		return nil, WrapError(err, 1).Explain("Could not ping database")
 	}
 
 	return db, nil
 }
 
-func CreateMigrationTable(db *sql.DB) (err error) {
-	// Check if the db driver is mysql
+func CreateMigrationTable(db *sql.DB) *Exception {
+	var err error
+
 	switch db.Driver().(type) {
 	case *mysql.MySQLDriver:
 		_, err = db.Exec(`
@@ -77,10 +78,16 @@ func CreateMigrationTable(db *sql.DB) (err error) {
 			`)
 	}
 
-	return err
+	if err != nil {
+		return WrapError(err, 1).Explain("Could not create migrations table")
+	}
+
+	return nil
 }
 
-func CreateMigrationEntry(db *sql.DB, name string) (err error) {
+func CreateMigrationEntry(db *sql.DB, name string) *Exception {
+	var err error
+
 	switch db.Driver().(type) {
 	case *mysql.MySQLDriver:
 	case *sqlite.Driver:
@@ -89,10 +96,16 @@ func CreateMigrationEntry(db *sql.DB, name string) (err error) {
 		_, err = db.Exec("INSERT INTO migrations (key) VALUES ($1)", name)
 	}
 
-	return err
+	if err != nil {
+		return WrapError(err, 1).Explain("Could not create migration entry")
+	}
+
+	return nil
 }
 
-func ApplyMigration(db *sql.DB, name string) (err error) {
+func ApplyMigration(db *sql.DB, name string) *Exception {
+	var err error
+
 	switch db.Driver().(type) {
 	case *mysql.MySQLDriver:
 	case *sqlite.Driver:
@@ -101,10 +114,15 @@ func ApplyMigration(db *sql.DB, name string) (err error) {
 		_, err = db.Exec("UPDATE migrations SET is_applied = true, updated_at = NOW() WHERE key = $1", name)
 	}
 
-	return err
+	if err != nil {
+		return WrapError(err, 1).Explain("Could not apply migration")
+	}
+
+	return nil
 }
 
-func RollbackMigration(db *sql.DB, name string) (err error) {
+func RollbackMigration(db *sql.DB, name string) *Exception {
+	var err error
 	switch db.Driver().(type) {
 	case *mysql.MySQLDriver:
 	case *sqlite.Driver:
@@ -113,10 +131,17 @@ func RollbackMigration(db *sql.DB, name string) (err error) {
 		_, err = db.Exec("UPDATE migrations SET is_applied = false, updated_at = NOW() WHERE key = $1", name)
 	}
 
-	return err
+	if err != nil {
+		return WrapError(err, 1).Explain("Could not rollback migration")
+	}
+
+	return nil
 }
 
-func GetMigrationStatus(db *sql.DB, name string) (isApplied bool, err error) {
+func GetMigrationStatus(db *sql.DB, name string) (bool, *Exception) {
+	var err error
+	var isApplied bool
+
 	switch db.Driver().(type) {
 	case *mysql.MySQLDriver:
 	case *sqlite.Driver:
@@ -125,10 +150,16 @@ func GetMigrationStatus(db *sql.DB, name string) (isApplied bool, err error) {
 		err = db.QueryRow("SELECT is_applied FROM migrations WHERE key = $1", name).Scan(&isApplied)
 	}
 
-	return isApplied, err
+	if err != nil {
+		return false, WrapError(err, 1).Explain("Could not get migration status")
+	}
+
+	return isApplied, nil
 }
 
-func GetMigrationsFromDatabase(db *sql.DB, applied bool) (migrations []string, err error) {
+func GetMigrationsFromDatabase(db *sql.DB, applied bool) ([]string, *Exception) {
+	var err error
+	var migrations []string
 	var rows *sql.Rows
 
 	switch db.Driver().(type) {
@@ -140,7 +171,7 @@ func GetMigrationsFromDatabase(db *sql.DB, applied bool) (migrations []string, e
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, WrapError(err, 1).Explain("Could not get migrations from database")
 	}
 
 	defer rows.Close()
@@ -151,7 +182,7 @@ func GetMigrationsFromDatabase(db *sql.DB, applied bool) (migrations []string, e
 		err = rows.Scan(&name)
 
 		if err != nil {
-			return nil, err
+			return nil, WrapError(err, 1).Explain("Could not scan migration row")
 		}
 
 		migrations = append(migrations, name)
@@ -160,39 +191,43 @@ func GetMigrationsFromDatabase(db *sql.DB, applied bool) (migrations []string, e
 	return migrations, nil
 }
 
-func ExecuteMigration(db *sql.DB, sql string) (err error) {
-	_, err = db.Exec(sql)
+func ExecuteMigration(db *sql.DB, sql string) *Exception {
+	_, err := db.Exec(sql)
 
-	return err
+	if err != nil {
+		return WrapError(err, 1).Explain("Could not execute migration")
+	}
+
+	return nil
 }
 
-func InitDb(cmd *cobra.Command) (db *sql.DB, err error) {
+func InitDb(cmd *cobra.Command) (*sql.DB, *Exception) {
 	var supportedDrivers = []string{"mysql", "postgres", "sqlite"}
 
 	connection := GetStringArg(cmd, "connection", "MONARCH_CONNECTION_STRING", "")
 
 	if connection == "" {
-		return nil, errors.New("connection string is required")
+		return nil, WrapError(errors.New("connection string is required"), 1)
 	}
 
 	driver := GetStringArg(cmd, "driver", "MONARCH_DRIVER", "")
 
 	if driver == "" {
-		return nil, errors.New("driver is required")
+		return nil, WrapError(errors.New("driver is required"), 1)
 	}
 
 	// Check if the driver is supported
 	supported := IsDriverSupported(driver, supportedDrivers)
 
 	if !supported {
-		return nil, errors.New("driver not supported")
+		return nil, WrapError(errors.New("driver not supported"), 1)
 	}
 
 	// Try to connect to the database
-	db, err = ConnectToDatabase(driver, connection)
+	db, err := ConnectToDatabase(driver, connection)
 
 	if err != nil {
-		return nil, errors.New("error connecting to database")
+		return nil, WrapError(err, 1).Explain("Could not connect to database")
 	}
 
 	return db, err

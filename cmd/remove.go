@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -27,23 +28,20 @@ var removeCmd = &cobra.Command{
 		}
 
 		if migrationName == "" {
-			println("migrationName is required")
-			os.Exit(1)
+			utils.WrapError(errors.New("migration name is required"), 1).Terminate()
 		}
 
-		migrationDir, err := utils.GetMigrationPath("")
+		migrationDir, exception := utils.GetMigrationPath("")
 
-		if err != nil {
-			println("Error getting migration path")
-			os.Exit(1)
+		if exception != nil {
+			exception.Terminate()
 		}
 
 		// Get a list of files in the migrations directory
 		entries, err := os.ReadDir(migrationDir)
 
 		if err != nil {
-			println("Error reading migrations directory")
-			os.Exit(1)
+			utils.WrapError(err, 1).Explain("Error reading migrations directory").Terminate()
 		}
 
 		var filesToDelete []string = []string{}
@@ -60,8 +58,7 @@ var removeCmd = &cobra.Command{
 		}
 
 		if len(filesToDelete) == 0 {
-			println("No matching migrations found")
-			os.Exit(1)
+			utils.WrapError(errors.New("no matching migrations found"), 1).Terminate()
 		}
 
 		var response string
