@@ -46,7 +46,7 @@ func CreateMigrationTable(db *sql.DB) (err error) {
 				CREATE TABLE IF NOT EXISTS migrations 
 				(
 					id INT NOT NULL AUTO_INCREMENT, 
-					name VARCHAR(255) NOT NULL,
+					key VARCHAR(255) NOT NULL,
 					is_applied BOOLEAN NOT NULL DEFAULT FALSE,
 					created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 					updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -58,7 +58,7 @@ func CreateMigrationTable(db *sql.DB) (err error) {
 				CREATE TABLE IF NOT EXISTS migrations
 				(
 					id SERIAL PRIMARY KEY,
-					name VARCHAR(255) NOT NULL,
+					key VARCHAR(255) NOT NULL,
 					is_applied BOOLEAN NOT NULL DEFAULT FALSE,
 					created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 					updated_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -69,7 +69,7 @@ func CreateMigrationTable(db *sql.DB) (err error) {
 				CREATE TABLE IF NOT EXISTS migrations
 				(
 					id INTEGER PRIMARY KEY AUTOINCREMENT,
-					name VARCHAR(255) NOT NULL,
+					key VARCHAR(255) NOT NULL,
 					is_applied BOOLEAN NOT NULL DEFAULT FALSE,
 					created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 					updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -84,9 +84,9 @@ func CreateMigrationEntry(db *sql.DB, name string) (err error) {
 	switch db.Driver().(type) {
 	case *mysql.MySQLDriver:
 	case *sqlite.Driver:
-		_, err = db.Exec("INSERT INTO migrations (name) VALUES (?)", name)
+		_, err = db.Exec("INSERT INTO migrations (key) VALUES (?)", name)
 	case *pq.Driver:
-		_, err = db.Exec("INSERT INTO migrations (name) VALUES ($1)", name)
+		_, err = db.Exec("INSERT INTO migrations (key) VALUES ($1)", name)
 	}
 
 	return err
@@ -134,9 +134,9 @@ func GetMigrationsFromDatabase(db *sql.DB, applied bool) (migrations []string, e
 	switch db.Driver().(type) {
 	case *mysql.MySQLDriver:
 	case *sqlite.Driver:
-		rows, err = db.Query("SELECT name FROM migrations WHERE is_applied = ?", applied)
+		rows, err = db.Query("SELECT key FROM migrations WHERE is_applied = ?", applied)
 	case *pq.Driver:
-		rows, err = db.Query("SELECT name FROM migrations WHERE is_applied = $1", applied)
+		rows, err = db.Query("SELECT key FROM migrations WHERE is_applied = $1", applied)
 	}
 
 	if err != nil {
