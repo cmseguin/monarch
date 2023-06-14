@@ -36,6 +36,6 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Version = "0.0.5"
+	rootCmd.Version = "0.0.6"
 	rootCmd.SetVersionTemplate("v{{.Version}}\n")
 }
