@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path"
 
@@ -54,6 +55,6 @@ var initCmd = &cobra.Command{
 			}
 		}
 
-		println("Initialized monarch in " + currentDir)
+		utils.PrintSuccess(fmt.Sprintf("Initialized monarch in %s", currentDir))
 	},
 }

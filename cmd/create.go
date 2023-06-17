@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"os"
 	"path"
 	"time"
@@ -26,8 +27,7 @@ var createCmd = &cobra.Command{
 		}
 
 		if migrationName == "" {
-			println("migrationName is required")
-			os.Exit(1)
+			utils.WrapError(errors.New("migration name is required"), 1).Terminate()
 		}
 
 		// Get a timestamp for the migration
@@ -35,7 +35,7 @@ var createCmd = &cobra.Command{
 
 		// validate the migration name
 		if !utils.ValidateMigrationName(migrationName) {
-			println("Invalid migration name")
+			utils.PrintWarning("Invalid migration name")
 			os.Exit(1)
 		}
 
@@ -55,7 +55,7 @@ var createCmd = &cobra.Command{
 		_, err := os.Stat(migrationUpPath)
 
 		if err == nil {
-			println("Migration up file already exists")
+			utils.PrintWarning("Migration up file already exists")
 		} else if os.IsNotExist(err) {
 			_, err := os.Create(migrationUpPath)
 			if err != nil {
@@ -66,7 +66,7 @@ var createCmd = &cobra.Command{
 		_, err = os.Stat(migrationDownPath)
 
 		if err == nil {
-			println("Migration down file already exists")
+			utils.PrintWarning("Migration down file already exists")
 		} else if os.IsNotExist(err) {
 			_, err := os.Create(migrationDownPath)
 
@@ -75,6 +75,6 @@ var createCmd = &cobra.Command{
 			}
 		}
 
-		println("Migration files created successfully")
+		utils.PrintSuccess("Migration files created successfully")
 	},
 }

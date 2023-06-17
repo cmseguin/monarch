@@ -74,6 +74,22 @@ var downCmd = &cobra.Command{
 			utils.WrapError(errors.New("no applied migration migrations to rollback after filtering"), 0).Terminate()
 		}
 
+		// Print the migrations that are going to be rollback
+		utils.PrintStmt("The following migration will be rollback:")
+
+		var migrationKeys []string = []string{}
+		for _, migrationObject := range migrationObjectsToRun {
+			migrationKeys = append(migrationKeys, migrationObject.Key)
+		}
+
+		utils.PrintOrderedList(migrationKeys)
+		res := utils.AskForConfirmation("Continue?", "y")
+
+		if !res {
+			utils.PrintWarning("Aborting migration rollback")
+			os.Exit(0)
+		}
+
 		// Run the migrations
 		for _, migrationObject := range migrationObjectsToRun {
 			fileContent, exception := utils.GetMigrationContent(migrationDir, migrationObject.File)
@@ -97,7 +113,7 @@ var downCmd = &cobra.Command{
 			}
 		}
 
-		println("Migrations rollback successfully")
+		utils.PrintSuccess("Migrations rollback successfully")
 		os.Exit(0)
 	},
 }

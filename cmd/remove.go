@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"regexp"
 
 	"github.com/cmseguin/monarch/internal/utils"
+	"github.com/ryanuber/go-glob"
 	"github.com/spf13/cobra"
 )
 
@@ -21,13 +21,13 @@ var removeCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		utils.LoadEnvFile(utils.GetStringArg(cmd, "dotenvfile", "", ""))
 
-		var migrationName string
+		var migrationPattern string
 
 		if len(args) > 0 {
-			migrationName = args[0]
+			migrationPattern = args[0]
 		}
 
-		if migrationName == "" {
+		if migrationPattern == "" {
 			utils.WrapError(errors.New("migration name is required"), 1).Terminate()
 		}
 
@@ -51,7 +51,7 @@ var removeCmd = &cobra.Command{
 			}
 
 			// regex to match the migration name
-			matched, _ := regexp.MatchString("[0-9]{14}-"+migrationName+".(up|down).sql", entry.Name())
+			matched := glob.Glob(migrationPattern, entry.Name())
 			if matched {
 				filesToDelete = append(filesToDelete, entry.Name())
 			}
@@ -61,30 +61,32 @@ var removeCmd = &cobra.Command{
 			utils.WrapError(errors.New("no matching migrations found"), 1).Terminate()
 		}
 
-		var response string
-		fmt.Println("The following migrations will be deleted:")
+		utils.PrintStmt("The following migrations will be deleted:")
 
-		for _, file := range filesToDelete {
-			fmt.Println(" - " + file)
+		utils.PrintUnorderedList(filesToDelete)
+
+		res := utils.AskForConfirmation(fmt.Sprintf("Are you sure you want to delete %d migrations?", len(filesToDelete)), "n")
+
+		if !res {
+			println("Aborting removal of migrations")
+			os.Exit(0)
 		}
 
-		fmt.Printf("Are you sure you want to delete %d migrations? (y/n): ", len(filesToDelete))
-		fmt.Scanln(&response)
-
-		if response != "y" {
-			println("Aborting")
-			os.Exit(1)
-		}
-
+		errorFiles := []string{}
 		for _, file := range filesToDelete {
 			err := os.Remove(path.Join(migrationDir, file))
 
 			if err != nil {
-				println("Error deleting migration")
-				os.Exit(1)
+				errorFiles = append(errorFiles, file)
 			}
 		}
 
-		println("Migrations deleted successfully")
+		if len(errorFiles) > 0 {
+			utils.PrintWarning("The following migrations could not be deleted:")
+			utils.PrintUnorderedList(errorFiles)
+			os.Exit(1)
+		}
+
+		utils.PrintSuccess("Migrations deleted successfully")
 	},
 }

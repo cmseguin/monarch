@@ -44,6 +44,6 @@ func (e *Exception) Terminate() {
 		message += trace[i] + "\n"
 	}
 	message += e.Error() + "\n"
-	print(message)
+	PrintErrorMessage(message)
 	os.Exit(e.Code())
 }
