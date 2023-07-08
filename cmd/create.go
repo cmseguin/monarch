@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"errors"
 	"os"
 	"path"
 	"time"
 
+	"github.com/cmseguin/khata"
 	"github.com/cmseguin/monarch/internal/utils"
 	"github.com/spf13/cobra"
 )
@@ -17,7 +17,7 @@ func init() {
 var createCmd = &cobra.Command{
 	Use:   "create [migrationName]",
 	Short: "Create a migration",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: utils.CreateCmdHandler(func(cmd *cobra.Command, args []string) *khata.Khata {
 		utils.LoadEnvFile(utils.GetStringArg(cmd, "dotenvfile", "", ""))
 
 		var migrationName string
@@ -27,7 +27,7 @@ var createCmd = &cobra.Command{
 		}
 
 		if migrationName == "" {
-			utils.WrapError(errors.New("migration name is required"), 1).Terminate()
+			return khata.New("migration name is required")
 		}
 
 		// Get a timestamp for the migration
@@ -35,18 +35,17 @@ var createCmd = &cobra.Command{
 
 		// validate the migration name
 		if !utils.ValidateMigrationName(migrationName) {
-			utils.PrintWarning("Invalid migration name")
-			os.Exit(1)
+			return khata.New("invalid migration name")
 		}
 
 		// Create the migration file
 		migrationUpFile := datestamp + "-" + migrationName + ".up.sql"
 		migrationDownFile := datestamp + "-" + migrationName + ".down.sql"
 
-		migrationPath, exception := utils.GetMigrationPath("")
+		migrationPath, kErr := utils.GetMigrationPath("")
 
-		if exception != nil {
-			exception.Terminate()
+		if kErr != nil {
+			return kErr.Explain("Error getting migration path")
 		}
 
 		migrationUpPath := path.Join(migrationPath, migrationUpFile)
@@ -59,7 +58,7 @@ var createCmd = &cobra.Command{
 		} else if os.IsNotExist(err) {
 			_, err := os.Create(migrationUpPath)
 			if err != nil {
-				utils.WrapError(err, 1).Explain("Error creating migration up file").Terminate()
+				return khata.New("error creating migration up file")
 			}
 		}
 
@@ -71,10 +70,11 @@ var createCmd = &cobra.Command{
 			_, err := os.Create(migrationDownPath)
 
 			if err != nil {
-				utils.WrapError(err, 1).Explain("Error creating migration down file").Terminate()
+				return khata.New("error creating migration down file")
 			}
 		}
 
 		utils.PrintSuccess("Migration files created successfully")
-	},
+		return nil
+	}),
 }

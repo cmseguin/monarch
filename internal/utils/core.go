@@ -1,13 +1,13 @@
 package utils
 
 import (
-	"errors"
 	"os"
 	"path"
 	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/cmseguin/khata"
 	"github.com/cmseguin/monarch/internal/types"
 	"github.com/ryanuber/go-glob"
 )
@@ -36,11 +36,11 @@ func ValidateMigrationName(migrationName string) bool {
 	return true
 }
 
-func GetMigrationPath(initPath string) (string, *Exception) {
+func GetMigrationPath(initPath string) (string, *khata.Khata) {
 	installDir, err := FindInstallationPath()
 
 	if err != nil {
-		return "", WrapError(err, 1).Explain("Could not find installation path")
+		return "", khata.Wrap(err).SetExitCode(1).Explain("Could not find installation path")
 	}
 
 	migrationDir := path.Join(installDir, "migrations")
@@ -48,14 +48,14 @@ func GetMigrationPath(initPath string) (string, *Exception) {
 	return migrationDir, nil
 }
 
-func GetMigrationContent(migrationDir, file string) (string, *Exception) {
+func GetMigrationContent(migrationDir, file string) (string, *khata.Khata) {
 	migrationPath := path.Join(migrationDir, file)
 
 	// Read the file
 	migrationContent, err := os.ReadFile(migrationPath)
 
 	if err != nil {
-		return "", WrapError(err, 1).Explain("Could not read migration file")
+		return "", khata.Wrap(err).SetExitCode(1).Explain("Could not read migration file")
 	}
 
 	return string(migrationContent), nil
@@ -83,11 +83,11 @@ func SortDownMigrations(migrations []string) []string {
 	return sortedMigrations
 }
 
-func FindInstallationPath() (string, *Exception) {
+func FindInstallationPath() (string, *khata.Khata) {
 	currentDir, err := os.Getwd()
 
 	if err != nil {
-		return "", WrapError(err, 1).Explain("Could not get current directory")
+		return "", khata.Wrap(err).SetExitCode(1).Explain("Could not get current directory")
 	}
 
 	// Check if the current directory is the installation directory
@@ -100,7 +100,7 @@ func FindInstallationPath() (string, *Exception) {
 		currentDir = path.Dir(currentDir)
 
 		if currentDir == "/" {
-			return "", WrapError(errors.New("Could not find installation directory"), 1)
+			return "", khata.New("Could not find installation directory").SetExitCode(1)
 		}
 
 		if _, err := os.Stat(path.Join(currentDir, "migrations")); err == nil {
@@ -112,11 +112,11 @@ func FindInstallationPath() (string, *Exception) {
 func GetDownMigratrionObjectsFromDir(
 	dirname string,
 	migrationObjects *[]types.MigrationObject,
-) *Exception {
+) *khata.Khata {
 	entries, err := os.ReadDir(dirname)
 
 	if err != nil {
-		return WrapError(err, 1).Explain("Could not read directory")
+		return khata.Wrap(err).SetExitCode(1).Explain("Could not read directory")
 	}
 
 	for _, entry := range entries {
@@ -138,11 +138,11 @@ func GetDownMigratrionObjectsFromDir(
 func GetUpMigratrionObjectsFromDir(
 	dirname string,
 	migrationObjects *[]types.MigrationObject,
-) *Exception {
+) *khata.Khata {
 	entries, err := os.ReadDir(dirname)
 
 	if err != nil {
-		return WrapError(err, 1).Explain("Could not read directory")
+		return khata.Wrap(err).SetExitCode(1).Explain("Could not read directory")
 	}
 
 	for _, entry := range entries {

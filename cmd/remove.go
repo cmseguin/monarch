@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path"
 
+	"github.com/cmseguin/khata"
 	"github.com/cmseguin/monarch/internal/utils"
 	"github.com/ryanuber/go-glob"
 	"github.com/spf13/cobra"
@@ -18,7 +18,7 @@ func init() {
 var removeCmd = &cobra.Command{
 	Use:   "remove [migrationName]",
 	Short: "Remove a migration",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: utils.CreateCmdHandler(func(cmd *cobra.Command, args []string) *khata.Khata {
 		utils.LoadEnvFile(utils.GetStringArg(cmd, "dotenvfile", "", ""))
 
 		var migrationPattern string
@@ -28,20 +28,20 @@ var removeCmd = &cobra.Command{
 		}
 
 		if migrationPattern == "" {
-			utils.WrapError(errors.New("migration name is required"), 1).Terminate()
+			return khata.New("migration name is required")
 		}
 
-		migrationDir, exception := utils.GetMigrationPath("")
+		migrationDir, kErr := utils.GetMigrationPath("")
 
-		if exception != nil {
-			exception.Terminate()
+		if kErr != nil {
+			return kErr.Explain("Error getting migration path")
 		}
 
 		// Get a list of files in the migrations directory
 		entries, err := os.ReadDir(migrationDir)
 
 		if err != nil {
-			utils.WrapError(err, 1).Explain("Error reading migrations directory").Terminate()
+			return khata.Wrap(err).Explain("Error reading migrations directory")
 		}
 
 		var filesToDelete []string = []string{}
@@ -58,18 +58,17 @@ var removeCmd = &cobra.Command{
 		}
 
 		if len(filesToDelete) == 0 {
-			utils.WrapError(errors.New("no matching migrations found"), 1).Terminate()
+			return khata.New("no matching migrations found")
 		}
 
 		utils.PrintStmt("The following migrations will be deleted:")
-
 		utils.PrintUnorderedList(filesToDelete)
 
 		res := utils.AskForConfirmation(fmt.Sprintf("Are you sure you want to delete %d migrations?", len(filesToDelete)), "n")
 
 		if !res {
-			println("Aborting removal of migrations")
-			os.Exit(0)
+			utils.PrintWarning("Aborting removal of migrations")
+			return nil
 		}
 
 		errorFiles := []string{}
@@ -82,11 +81,11 @@ var removeCmd = &cobra.Command{
 		}
 
 		if len(errorFiles) > 0 {
-			utils.PrintWarning("The following migrations could not be deleted:")
-			utils.PrintUnorderedList(errorFiles)
-			os.Exit(1)
+			return khata.New("error deleting migrations").
+				Explainf("Error deleting the following migrations: %v", errorFiles)
 		}
 
 		utils.PrintSuccess("Migrations deleted successfully")
-	},
+		return nil
+	}),
 }

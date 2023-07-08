@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/cmseguin/khata"
 	"github.com/cmseguin/monarch/internal/utils"
 	"github.com/spf13/cobra"
 )
@@ -19,28 +20,28 @@ func init() {
 var initCmd = &cobra.Command{
 	Use:   "init [path] [flags]",
 	Short: "Initialize monarch's migration directory & creates a table in the database to track migrations",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: utils.CreateCmdHandler(func(cmd *cobra.Command, args []string) *khata.Khata {
 		utils.LoadEnvFile(utils.GetStringArg(cmd, "dotenvfile", "", ""))
 
 		// Get the current working directory
 		currentDir, err := os.Getwd()
 
 		if err != nil {
-			utils.WrapError(err, 1).Explain("Error getting current working directory").Terminate()
+			return khata.Wrap(err).Explain("Error getting current working directory")
 		}
 
 		// Try to connect to the database
-		db, exception := utils.InitDb(cmd)
+		db, kErr := utils.InitDb(cmd)
 
-		if exception != nil {
-			exception.Terminate()
+		if kErr != nil {
+			return kErr.Explain("Error connecting to the database")
 		}
 
 		// Create the migrations table
-		exception = utils.CreateMigrationTable(db)
+		kErr = utils.CreateMigrationTable(db)
 
-		if exception != nil {
-			exception.Terminate()
+		if kErr != nil {
+			return kErr.Explain("Error creating migration table")
 		}
 
 		migrationDir := path.Join(currentDir, "migrations")
@@ -51,10 +52,11 @@ var initCmd = &cobra.Command{
 			err := os.Mkdir(migrationDir, 0755)
 
 			if err != nil {
-				utils.WrapError(err, 1).Explain("Error creating migrations directory").Terminate()
+				return khata.Wrap(err).Explain("Error creating migrations directory")
 			}
 		}
 
 		utils.PrintSuccess(fmt.Sprintf("Initialized monarch in %s", currentDir))
-	},
+		return nil
+	}),
 }

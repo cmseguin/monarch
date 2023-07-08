@@ -2,8 +2,8 @@ package utils
 
 import (
 	"database/sql"
-	"errors"
 
+	"github.com/cmseguin/khata"
 	"github.com/go-sql-driver/mysql"
 	"github.com/lib/pq"
 	"github.com/spf13/cobra"
@@ -22,23 +22,23 @@ func IsDriverSupported(driver string, supportedDriverList []string) bool {
 	return supported
 }
 
-func ConnectToDatabase(driver string, connection string) (*sql.DB, *Exception) {
+func ConnectToDatabase(driver string, connection string) (*sql.DB, *khata.Khata) {
 	db, err := sql.Open(driver, connection)
 
 	if err != nil {
-		return nil, WrapError(err, 1).Explain("Could not connect to database")
+		return nil, khata.Wrap(err).SetExitCode(1).Explain("Could not connect to database")
 	}
 
 	err = db.Ping()
 
 	if err != nil {
-		return nil, WrapError(err, 1).Explain("Could not ping database")
+		return nil, khata.Wrap(err).SetExitCode(1).Explain("Could not ping database")
 	}
 
 	return db, nil
 }
 
-func CreateMigrationTable(db *sql.DB) *Exception {
+func CreateMigrationTable(db *sql.DB) *khata.Khata {
 	var err error
 
 	switch db.Driver().(type) {
@@ -79,13 +79,13 @@ func CreateMigrationTable(db *sql.DB) *Exception {
 	}
 
 	if err != nil {
-		return WrapError(err, 1).Explain("Could not create migrations table")
+		return khata.Wrap(err).SetExitCode(1).Explain("Could not create migrations table")
 	}
 
 	return nil
 }
 
-func CreateMigrationEntry(db *sql.DB, name string) *Exception {
+func CreateMigrationEntry(db *sql.DB, name string) *khata.Khata {
 	var err error
 
 	switch db.Driver().(type) {
@@ -97,13 +97,13 @@ func CreateMigrationEntry(db *sql.DB, name string) *Exception {
 	}
 
 	if err != nil {
-		return WrapError(err, 1).Explain("Could not create migration entry")
+		return khata.Wrap(err).SetExitCode(1).Explain("Could not create migration entry")
 	}
 
 	return nil
 }
 
-func ApplyMigration(db *sql.DB, name string) *Exception {
+func ApplyMigration(db *sql.DB, name string) *khata.Khata {
 	var err error
 
 	switch db.Driver().(type) {
@@ -115,13 +115,13 @@ func ApplyMigration(db *sql.DB, name string) *Exception {
 	}
 
 	if err != nil {
-		return WrapError(err, 1).Explain("Could not apply migration")
+		return khata.Wrap(err).SetExitCode(1).Explain("Could not apply migration")
 	}
 
 	return nil
 }
 
-func RollbackMigration(db *sql.DB, name string) *Exception {
+func RollbackMigration(db *sql.DB, name string) *khata.Khata {
 	var err error
 	switch db.Driver().(type) {
 	case *mysql.MySQLDriver:
@@ -132,13 +132,13 @@ func RollbackMigration(db *sql.DB, name string) *Exception {
 	}
 
 	if err != nil {
-		return WrapError(err, 1).Explain("Could not rollback migration")
+		return khata.Wrap(err).SetExitCode(1).Explain("Could not rollback migration")
 	}
 
 	return nil
 }
 
-func GetMigrationStatus(db *sql.DB, name string) (bool, *Exception) {
+func GetMigrationStatus(db *sql.DB, name string) (bool, *khata.Khata) {
 	var err error
 	var isApplied bool
 
@@ -151,13 +151,13 @@ func GetMigrationStatus(db *sql.DB, name string) (bool, *Exception) {
 	}
 
 	if err != nil {
-		return false, WrapError(err, 1).Explain("Could not get migration status")
+		return false, khata.Wrap(err).SetExitCode(1).Explain("Could not get migration status")
 	}
 
 	return isApplied, nil
 }
 
-func GetMigrationsFromDatabase(db *sql.DB, applied bool) ([]string, *Exception) {
+func GetMigrationsFromDatabase(db *sql.DB, applied bool) ([]string, *khata.Khata) {
 	var err error
 	var migrations []string
 	var rows *sql.Rows
@@ -171,7 +171,7 @@ func GetMigrationsFromDatabase(db *sql.DB, applied bool) ([]string, *Exception) 
 	}
 
 	if err != nil {
-		return nil, WrapError(err, 1).Explain("Could not get migrations from database")
+		return nil, khata.Wrap(err).SetExitCode(1).Explain("Could not get migrations from database")
 	}
 
 	defer rows.Close()
@@ -182,7 +182,7 @@ func GetMigrationsFromDatabase(db *sql.DB, applied bool) ([]string, *Exception) 
 		err = rows.Scan(&name)
 
 		if err != nil {
-			return nil, WrapError(err, 1).Explain("Could not scan migration row")
+			return nil, khata.Wrap(err).SetExitCode(1).Explain("Could not scan migration row")
 		}
 
 		migrations = append(migrations, name)
@@ -191,43 +191,43 @@ func GetMigrationsFromDatabase(db *sql.DB, applied bool) ([]string, *Exception) 
 	return migrations, nil
 }
 
-func ExecuteMigration(db *sql.DB, sql string) *Exception {
+func ExecuteMigration(db *sql.DB, sql string) *khata.Khata {
 	_, err := db.Exec(sql)
 
 	if err != nil {
-		return WrapError(err, 1).Explain("Could not execute migration")
+		return khata.Wrap(err).SetExitCode(1).Explain("Could not execute migration")
 	}
 
 	return nil
 }
 
-func InitDb(cmd *cobra.Command) (*sql.DB, *Exception) {
+func InitDb(cmd *cobra.Command) (*sql.DB, *khata.Khata) {
 	var supportedDrivers = []string{"mysql", "postgres", "sqlite"}
 
 	connection := GetStringArg(cmd, "connection", "MONARCH_CONNECTION_STRING", "")
 
 	if connection == "" {
-		return nil, WrapError(errors.New("connection string is required"), 1)
+		return nil, khata.New("connection string is required").SetExitCode(1)
 	}
 
 	driver := GetStringArg(cmd, "driver", "MONARCH_DRIVER", "")
 
 	if driver == "" {
-		return nil, WrapError(errors.New("driver is required"), 1)
+		return nil, khata.New("driver is required").SetExitCode(1)
 	}
 
 	// Check if the driver is supported
 	supported := IsDriverSupported(driver, supportedDrivers)
 
 	if !supported {
-		return nil, WrapError(errors.New("driver not supported"), 1)
+		return nil, khata.New("driver not supported").SetExitCode(1)
 	}
 
 	// Try to connect to the database
 	db, err := ConnectToDatabase(driver, connection)
 
 	if err != nil {
-		return nil, WrapError(err, 1).Explain("Could not connect to database")
+		return nil, khata.Wrap(err).SetExitCode(1).Explain("Could not connect to database")
 	}
 
 	return db, err

@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"errors"
-	"os"
-
+	"github.com/cmseguin/khata"
 	"github.com/cmseguin/monarch/internal/types"
 	"github.com/cmseguin/monarch/internal/utils"
 	"github.com/spf13/cobra"
@@ -16,7 +14,7 @@ func init() {
 var downCmd = &cobra.Command{
 	Use:   "down [limitPattern]",
 	Short: "Migration down",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: utils.CreateCmdHandler(func(cmd *cobra.Command, args []string) *khata.Khata {
 		utils.LoadEnvFile(utils.GetStringArg(cmd, "dotenvfile", "", ""))
 
 		var limitPattern string = "*"
@@ -28,36 +26,37 @@ var downCmd = &cobra.Command{
 		// TODO add support for inputting the init path
 		var initPath string = "."
 
-		migrationDir, exception := utils.GetMigrationPath(initPath)
+		migrationDir, kErr := utils.GetMigrationPath(initPath)
 
-		if exception != nil {
-			exception.Terminate()
+		if kErr != nil {
+			return kErr.Explain("Error getting migration path")
 		}
 
 		migrationObjects := []types.MigrationObject{}
 
-		exception = utils.GetDownMigratrionObjectsFromDir(migrationDir, &migrationObjects)
+		kErr = utils.GetDownMigratrionObjectsFromDir(migrationDir, &migrationObjects)
 
-		if exception != nil {
-			exception.Terminate()
+		if kErr != nil {
+			return kErr.Explain("Error getting migration objects")
 		}
 
 		if len(migrationObjects) == 0 {
-			utils.WrapError(errors.New("no migration files to rollback"), 0).Terminate()
+			utils.PrintWarning("No migrations found to rollback")
+			return nil
 		}
 
 		// Filter out the down migrations
-		db, exception := utils.InitDb(cmd)
+		db, kErr := utils.InitDb(cmd)
 
-		if exception != nil {
-			exception.Explain("Error connecting to the database").SetCode(1).Terminate()
+		if kErr != nil {
+			return kErr.Explain("Error connecting to the database")
 		}
 
 		// Get the list of migrations that have already been run
-		invalidMigrationKeysFromDatabase, exception := utils.GetMigrationsFromDatabase(db, false)
+		invalidMigrationKeysFromDatabase, kErr := utils.GetMigrationsFromDatabase(db, false)
 
-		if exception != nil {
-			exception.Terminate()
+		if kErr != nil {
+			return kErr.Explain("Error getting migrations from database")
 		}
 
 		sortedMigrations := utils.SortMigrationObjects(migrationObjects)
@@ -71,7 +70,7 @@ var downCmd = &cobra.Command{
 		)
 
 		if len(migrationObjectsToRun) == 0 {
-			utils.WrapError(errors.New("no applied migration migrations to rollback after filtering"), 0).Terminate()
+			return khata.New("no applied migration migrations to rollback after filtering")
 		}
 
 		// Print the migrations that are going to be rollback
@@ -87,33 +86,33 @@ var downCmd = &cobra.Command{
 
 		if !res {
 			utils.PrintWarning("Aborting migration rollback")
-			os.Exit(0)
+			return nil
 		}
 
 		// Run the migrations
 		for _, migrationObject := range migrationObjectsToRun {
-			fileContent, exception := utils.GetMigrationContent(migrationDir, migrationObject.File)
+			fileContent, kErr := utils.GetMigrationContent(migrationDir, migrationObject.File)
 
-			if exception != nil {
-				exception.Explain("Error getting migration content: " + migrationObject.File).Terminate()
+			if kErr != nil {
+				return kErr.Explainf("Error getting migration content: %s", migrationObject.File)
 			}
 
 			// Run the migration
-			exception = utils.ExecuteMigration(db, fileContent)
+			kErr = utils.ExecuteMigration(db, fileContent)
 
-			if exception != nil {
-				exception.Explain("Error running migration: " + migrationObject.File).Terminate()
+			if kErr != nil {
+				return kErr.Explainf("Error running migration: %s", migrationObject.File)
 			}
 
 			// Update the status of the migration in the database.
-			exception = utils.RollbackMigration(db, migrationObject.Key)
+			kErr = utils.RollbackMigration(db, migrationObject.Key)
 
-			if exception != nil {
-				exception.Explain("Error updating the status of migration: " + migrationObject.Key).Terminate()
+			if kErr != nil {
+				return kErr.Explainf("Error updating the status of migration: %s", migrationObject.Key)
 			}
 		}
 
 		utils.PrintSuccess("Migrations rollback successfully")
-		os.Exit(0)
-	},
+		return nil
+	}),
 }
