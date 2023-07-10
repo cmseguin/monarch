@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/cmseguin/khata"
+	"github.com/cmseguin/monarch/internal/errors"
 	"github.com/cmseguin/monarch/internal/types"
 	"github.com/cmseguin/monarch/internal/utils"
 	"github.com/spf13/cobra"
@@ -70,7 +71,7 @@ var downCmd = &cobra.Command{
 		)
 
 		if len(migrationObjectsToRun) == 0 {
-			return khata.New("no applied migration migrations to rollback after filtering")
+			return errors.WarningError.New("No applied migration migrations to rollback after filtering")
 		}
 
 		// Print the migrations that are going to be rollback

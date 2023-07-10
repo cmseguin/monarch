@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/cmseguin/khata"
+	"github.com/cmseguin/monarch/internal/errors"
 	"github.com/cmseguin/monarch/internal/types"
 	"github.com/cmseguin/monarch/internal/utils"
 	"github.com/spf13/cobra"
@@ -85,8 +86,18 @@ var upCmd = &cobra.Command{
 		res := utils.AskForConfirmation("Continue?", "y")
 
 		if !res {
-			utils.PrintWarning("Aborting migration")
-			return nil
+			return errors.WarningError.New("Aborting migration")
+		}
+
+		migrationsFromDbMap := map[string]types.Migration{}
+		migrationsFromDb, kErr := utils.GetAllMigrationsFromDatabase(db)
+
+		if kErr != nil {
+			return kErr.Explain("Error getting all migrations from database")
+		}
+
+		for _, m := range migrationsFromDb {
+			migrationsFromDbMap[m.Key] = m
 		}
 
 		// Run the migrations
@@ -104,7 +115,15 @@ var upCmd = &cobra.Command{
 				return kErr.Explainf("Error running migration: %s", migrationObject.File)
 			}
 
-			// Update the status of the migration in the database.
+			// Check if the migration is already in the database otherwise add it
+			if migrationsFromDbMap[migrationObject.Key].Key != migrationObject.Key {
+				kErr = utils.CreateMigrationEntry(db, migrationObject.Key)
+			}
+
+			if kErr != nil {
+				return kErr.Explainf("Error creating migration entry: %s", migrationObject.Key)
+			}
+
 			kErr = utils.ApplyMigration(db, migrationObject.Key)
 
 			if kErr != nil {

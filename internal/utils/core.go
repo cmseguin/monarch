@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/cmseguin/khata"
+	"github.com/cmseguin/monarch/internal/errors"
 	"github.com/cmseguin/monarch/internal/types"
 	"github.com/ryanuber/go-glob"
 )
@@ -40,7 +41,7 @@ func GetMigrationPath(initPath string) (string, *khata.Khata) {
 	installDir, err := FindInstallationPath()
 
 	if err != nil {
-		return "", khata.Wrap(err).SetExitCode(1).Explain("Could not find installation path")
+		return "", errors.FatalError.Wrap(err).Explain("Could not find installation path")
 	}
 
 	migrationDir := path.Join(installDir, "migrations")
@@ -55,7 +56,7 @@ func GetMigrationContent(migrationDir, file string) (string, *khata.Khata) {
 	migrationContent, err := os.ReadFile(migrationPath)
 
 	if err != nil {
-		return "", khata.Wrap(err).SetExitCode(1).Explain("Could not read migration file")
+		return "", errors.FatalError.Wrap(err).Explain("Could not read migration file")
 	}
 
 	return string(migrationContent), nil
@@ -87,7 +88,7 @@ func FindInstallationPath() (string, *khata.Khata) {
 	currentDir, err := os.Getwd()
 
 	if err != nil {
-		return "", khata.Wrap(err).SetExitCode(1).Explain("Could not get current directory")
+		return "", errors.FatalError.Wrap(err).Explain("Could not get current directory")
 	}
 
 	// Check if the current directory is the installation directory
@@ -100,7 +101,7 @@ func FindInstallationPath() (string, *khata.Khata) {
 		currentDir = path.Dir(currentDir)
 
 		if currentDir == "/" {
-			return "", khata.New("Could not find installation directory").SetExitCode(1)
+			return "", khata.New("Could not find installation directory")
 		}
 
 		if _, err := os.Stat(path.Join(currentDir, "migrations")); err == nil {
@@ -116,7 +117,7 @@ func GetDownMigratrionObjectsFromDir(
 	entries, err := os.ReadDir(dirname)
 
 	if err != nil {
-		return khata.Wrap(err).SetExitCode(1).Explain("Could not read directory")
+		return errors.FatalError.Wrap(err).Explain("Could not read directory")
 	}
 
 	for _, entry := range entries {
@@ -142,7 +143,7 @@ func GetUpMigratrionObjectsFromDir(
 	entries, err := os.ReadDir(dirname)
 
 	if err != nil {
-		return khata.Wrap(err).SetExitCode(1).Explain("Could not read directory")
+		return errors.FatalError.Wrap(err).Explain("Could not read directory")
 	}
 
 	for _, entry := range entries {

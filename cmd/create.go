@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cmseguin/khata"
+	"github.com/cmseguin/monarch/internal/errors"
 	"github.com/cmseguin/monarch/internal/utils"
 	"github.com/spf13/cobra"
 )
@@ -27,7 +28,7 @@ var createCmd = &cobra.Command{
 		}
 
 		if migrationName == "" {
-			return khata.New("migration name is required")
+			return errors.FatalError.New("migration name is required")
 		}
 
 		// Get a timestamp for the migration
@@ -35,7 +36,7 @@ var createCmd = &cobra.Command{
 
 		// validate the migration name
 		if !utils.ValidateMigrationName(migrationName) {
-			return khata.New("invalid migration name")
+			return errors.FatalError.New("invalid migration name")
 		}
 
 		// Create the migration file
@@ -58,7 +59,7 @@ var createCmd = &cobra.Command{
 		} else if os.IsNotExist(err) {
 			_, err := os.Create(migrationUpPath)
 			if err != nil {
-				return khata.New("error creating migration up file")
+				return errors.FatalError.New("error creating migration up file")
 			}
 		}
 
@@ -70,7 +71,7 @@ var createCmd = &cobra.Command{
 			_, err := os.Create(migrationDownPath)
 
 			if err != nil {
-				return khata.New("error creating migration down file")
+				return errors.FatalError.New("error creating migration down file")
 			}
 		}
 

@@ -4,7 +4,7 @@ go 1.20
 
 require golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 
-require github.com/cmseguin/khata v0.0.6 // indirect
+require github.com/cmseguin/khata v0.0.7 // indirect
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect

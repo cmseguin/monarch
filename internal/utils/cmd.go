@@ -12,7 +12,11 @@ func CreateCmdHandler(handler func(cmd *cobra.Command, args []string) *khata.Kha
 		kErr := handler(cmd, args)
 
 		if kErr != nil {
-			kErr.Debug()
+			if kErr.Code() == 2 {
+				PrintWarning(kErr.Error())
+			} else {
+				PrintErrorMessage(kErr.Error())
+			}
 			os.Exit(kErr.ExitCode())
 		}
 

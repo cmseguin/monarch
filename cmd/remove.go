@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"github.com/cmseguin/khata"
+	"github.com/cmseguin/monarch/internal/errors"
 	"github.com/cmseguin/monarch/internal/utils"
 	"github.com/ryanuber/go-glob"
 	"github.com/spf13/cobra"
@@ -28,7 +29,7 @@ var removeCmd = &cobra.Command{
 		}
 
 		if migrationPattern == "" {
-			return khata.New("migration name is required")
+			return errors.FatalError.New("migration name is required")
 		}
 
 		migrationDir, kErr := utils.GetMigrationPath("")
@@ -58,7 +59,7 @@ var removeCmd = &cobra.Command{
 		}
 
 		if len(filesToDelete) == 0 {
-			return khata.New("no matching migrations found")
+			return errors.FatalError.New("no matching migrations found")
 		}
 
 		utils.PrintStmt("The following migrations will be deleted:")
@@ -67,8 +68,7 @@ var removeCmd = &cobra.Command{
 		res := utils.AskForConfirmation(fmt.Sprintf("Are you sure you want to delete %d migrations?", len(filesToDelete)), "n")
 
 		if !res {
-			utils.PrintWarning("Aborting removal of migrations")
-			return nil
+			return errors.WarningError.New("Aborting removal of migrations")
 		}
 
 		errorFiles := []string{}
@@ -81,8 +81,7 @@ var removeCmd = &cobra.Command{
 		}
 
 		if len(errorFiles) > 0 {
-			return khata.New("error deleting migrations").
-				Explainf("Error deleting the following migrations: %v", errorFiles)
+			return errors.WarningError.New("error deleting migrations", utils.SPrintUnorderedList(errorFiles))
 		}
 
 		utils.PrintSuccess("Migrations deleted successfully")

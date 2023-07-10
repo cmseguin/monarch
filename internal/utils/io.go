@@ -10,16 +10,40 @@ func PrintStmt(stmt string) {
 	fmt.Println(stmt)
 }
 
-func PrintUnorderedList(list []string) {
-	for _, item := range list {
-		fmt.Println(chalk.Green, " • ", chalk.Reset, item)
-	}
+func SPrintStmt(stmt string) string {
+	return fmt.Sprintln(stmt)
 }
 
-func PrintOrderedList(list []string) {
-	for i, item := range list {
-		fmt.Println(chalk.Green, " ", i+1, ". ", chalk.Reset, item)
-	}
+func PrintSuccess(message string) {
+	fmt.Println(chalk.Green.Color(message))
+}
+
+func SPrintSuccess(message string) string {
+	return fmt.Sprintln(chalk.Green.Color(message))
+}
+
+func PrintInfo(message string) {
+	fmt.Println(chalk.Cyan.Color(message))
+}
+
+func SPrintInfo(message string) string {
+	return fmt.Sprintln(chalk.Cyan.Color(message))
+}
+
+func PrintWarning(message string) {
+	fmt.Println(chalk.Yellow.Color(message))
+}
+
+func SPrintWarning(message string) string {
+	return fmt.Sprintln(chalk.Yellow.Color(message))
+}
+
+func PrintErrorMessage(message string) {
+	fmt.Println(chalk.Red.Color(message))
+}
+
+func SPrintErrorMessage(message string) string {
+	return fmt.Sprintln(chalk.Red.Color(message))
 }
 
 func AskForConfirmation(message, defaultValue string) bool {
@@ -45,27 +69,34 @@ func AskForConfirmation(message, defaultValue string) bool {
 	}
 }
 
-func PrintSuccess(message string) {
-	fmt.Println(chalk.Green.Color(message))
+func PrintUnorderedList(list []string) {
+	for _, item := range list {
+		fmt.Println(chalk.Green, " • ", chalk.Reset, item)
+	}
 }
 
-func PrintInfo(message string) {
-	fmt.Println(chalk.Cyan.Color(message))
+func SPrintUnorderedList(list []string) string {
+	var output string = ""
+
+	for _, item := range list {
+		output = fmt.Sprintln(chalk.Green, " • ", chalk.Reset, item)
+	}
+
+	return output
 }
 
-func PrintWarning(message string) {
-	fmt.Println(chalk.Yellow.Color(message))
+func PrintOrderedList(list []string) {
+	for i, item := range list {
+		fmt.Println(chalk.Green, " ", i+1, ". ", chalk.Reset, item)
+	}
 }
 
-func PrintErrorMessage(message string) {
-	fmt.Println(chalk.Red.Color(message))
-}
+func SPrintOrderedList(list []string) string {
+	var output string = ""
 
-func PrintError(err error) {
-	fmt.Println(chalk.Red.Color(err.Error()))
-}
+	for i, item := range list {
+		output = fmt.Sprintln(chalk.Green, " ", i+1, ". ", chalk.Reset, item)
+	}
 
-func PrintFatal(err error) {
-	fmt.Println(chalk.Red.Color(err.Error()))
-	panic(err)
+	return output
 }
